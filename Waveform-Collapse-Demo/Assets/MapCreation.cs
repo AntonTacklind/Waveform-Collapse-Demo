@@ -15,15 +15,21 @@ public class MapCreation : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Application.targetFrameRate = 60;
         //GenerateGrid(3, 3);
         GenerateGrid(10, 10);
-        GetComponent<WaveformCollapse>().PopulateGrid(grid, currentWidth, currentHeight);
+        //GetComponent<WaveformCollapse>().PopulateGrid(grid, currentWidth, currentHeight);
     }
 
     // Update is called once per frame
     void Update()
     {
         
+    }
+
+    public void RegenerateGrid()
+    {
+        GenerateGrid(currentWidth, currentHeight);
     }
 
     public void GenerateGrid(int width, int height)
@@ -149,6 +155,8 @@ public class MapCreation : MonoBehaviour
         {
             maximumWidth = currentWidth;
         }
+
+        GetComponent<WaveformCollapse>().PopulateGrid(grid, currentWidth, currentHeight);
     }
 
     public void CreateTile(int x, int y)
