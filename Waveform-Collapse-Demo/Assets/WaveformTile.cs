@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class WaveformTile : MonoBehaviour
@@ -7,6 +8,8 @@ public class WaveformTile : MonoBehaviour
     public int tileType;
     public int x;
     public int y;
+
+    public List<int> allowedTypes = new List<int>();
 
     // Start is called before the first frame update
     void Start()
@@ -23,6 +26,40 @@ public class WaveformTile : MonoBehaviour
     public void UpdateMaterial()
     {
         GetComponent<Renderer>().material = TileTypeManager.GetMaterial(tileType);
+    }
+
+    public List<int> GetPossibleNeighbors()
+    {
+        if (tileType != -1)
+        {
+            return TileTypeManager.GetAllowedTileTypes(tileType);
+        }
+        else
+        {
+            List<int> possible = new List<int>();
+            foreach(int possibility in allowedTypes)
+            {
+                possible.AddRange(TileTypeManager.GetAllowedTileTypes(possibility));
+            }
+            possible = possible.Distinct().ToList();
+            return possible;
+        }
+    }
+
+    public void ApplyPossibilityGradient()
+    {
+        if (tileType == -1)
+        {
+            //Black = many possibilities
+            float allowedTypesFloat = allowedTypes.Count;
+            float possible = TileTypeManager.global.tileTypes.Count;
+            float gradient = 1 - (allowedTypesFloat / possible);
+            var color = GetComponent<Renderer>().material.color;
+            color.r = gradient;
+            color.g = gradient;
+            color.b = gradient;
+            GetComponent<Renderer>().material.color = color;
+        }
     }
 
     public float DistanceTo(int x, int y)

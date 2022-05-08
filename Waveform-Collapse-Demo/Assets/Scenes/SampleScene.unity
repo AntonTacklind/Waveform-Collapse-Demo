@@ -353,7 +353,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1994227640}
         m_TargetAssemblyTypeName: WaveformCollapse, Assembly-CSharp
-        m_MethodName: WaveformStep
+        m_MethodName: WaveformStepButton
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -917,6 +917,7 @@ GameObject:
   - component: {fileID: 1994227638}
   - component: {fileID: 1994227640}
   - component: {fileID: 1994227641}
+  - component: {fileID: 1994227642}
   m_Layer: 0
   m_Name: Scriptholder
   m_TagString: Untagged
@@ -964,8 +965,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   generationMode: 1
-  propagationMode: 3
-  smoothSpeed: 25
+  propagationMode: 4
+  calculationMode: 0
+  automaticSpeed: 15
 --- !u!114 &1994227641
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -978,7 +980,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe27320ddd7831e41bb27a2ff9521f67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  defaultMaterial: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  defaultMaterial: {fileID: 2100000, guid: 95af5f852cdf2f849b4d0a785d5e038a, type: 2}
   tileTypes:
   - name: Deep Water
     material: {fileID: 2100000, guid: 1435ae59af88a484c92e420855171fc9, type: 2}
@@ -995,3 +997,16 @@ MonoBehaviour:
   - name: Trees
     material: {fileID: 2100000, guid: 4ef07237098aae14b969a8270cacdbf6, type: 2}
     allowedNeighbors: 0300000004000000
+--- !u!114 &1994227642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1994227637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5500dd6a03f823642b6aad41dddaeebd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  queue: []

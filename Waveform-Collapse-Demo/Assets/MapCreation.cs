@@ -14,13 +14,17 @@ public class MapCreation : MonoBehaviour
 
     private bool started = false;
 
+    public static MapCreation global;
+
     // Start is called before the first frame update
     void Start()
     {
+        print("MAP CREATION");
         //Application.targetFrameRate = 60;
         //GenerateGrid(3, 3);
         //GenerateGrid(200, 200);
         //GetComponent<WaveformCollapse>().PopulateGrid(grid, currentWidth, currentHeight);
+        global = this;
     }
 
     // Update is called once per frame
@@ -194,5 +198,29 @@ public class MapCreation : MonoBehaviour
     public static string GetPosKey(int x, int y)
     {
         return $"{x},{y}";
+    }
+
+    private static WaveformTile Get(int x, int y)
+    {
+        return global.grid[GetPosKey(x, y)];
+    }
+
+    public static List<WaveformTile> GetNeighbors(WaveformTile tile)
+    {
+        return GetNeighbors(tile.x, tile.y);
+    }
+
+    public static List<WaveformTile> GetNeighbors(int x, int y)
+    {
+        List<WaveformTile> ret = new List<WaveformTile>();
+        if (x > 0)
+            ret.Add(Get(x - 1, y));
+        if (y > 0)
+            ret.Add(Get(x, y - 1));
+        if (x + 1 < global.currentWidth)
+            ret.Add(Get(x + 1, y));
+        if (y + 1 < global.currentHeight)
+            ret.Add(Get(x, y + 1));
+        return ret;
     }
 }

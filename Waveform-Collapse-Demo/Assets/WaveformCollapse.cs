@@ -10,6 +10,7 @@ public class WaveformCollapse : MonoBehaviour
     {
         BigBang,
         StepwiseAutomaticSmooth,
+        StepwiseAutomaticWeighted,
         Stepwise
     }
 
@@ -18,13 +19,21 @@ public class WaveformCollapse : MonoBehaviour
         NeighborsQueue,
         Circular,
         RandomNeighbor,
-        CompletelyRandom
+        CompletelyRandom,
+        LeastPossibleOutcomesFirst
+    }
+
+    public enum CalculationMode
+    {
+        OnEvaluation,
+        FullPropagation
     }
 
     public GenerationMode generationMode;
     public PropagationMode propagationMode;
+    public CalculationMode calculationMode;
 
-    public int smoothSpeed = 1;
+    public int automaticSpeed = 1;
 
     private Dictionary<string, WaveformTile> grid = new Dictionary<string, WaveformTile>();
     private int maxWidth;
@@ -32,11 +41,14 @@ public class WaveformCollapse : MonoBehaviour
 
     private List<WaveformTile> queue = new List<WaveformTile>();
     private BinaryTree<WaveformTile> binaryTree;
+    private Dictionary<int, List<WaveformTile>> prioQueue = new Dictionary<int, List<WaveformTile>>();
+
+    private FullPropagation fullPropagation;
 
     // Start is called before the first frame update
     void Start()
     {
-
+        fullPropagation = GetComponent<FullPropagation>();
     }
 
     // Update is called once per frame
@@ -44,9 +56,17 @@ public class WaveformCollapse : MonoBehaviour
     {
         if (generationMode == GenerationMode.StepwiseAutomaticSmooth)
         {
-            for(int i=0; i < smoothSpeed; i++)
+            for(int i=0; i < automaticSpeed; i++)
             {
                 WaveformStep();
+            }
+        }
+        else if(generationMode == GenerationMode.StepwiseAutomaticWeighted)
+        {
+            int total = automaticSpeed;
+            while(total > 0)
+            {
+                total -= WaveformStep();
             }
         }
     }
@@ -72,6 +92,16 @@ public class WaveformCollapse : MonoBehaviour
         {
             tile.tileType = -1;
             tile.UpdateMaterial();
+            tile.allowedTypes.Clear();
+        }
+
+        if (calculationMode == CalculationMode.FullPropagation)
+        {
+            foreach(WaveformTile tile in tiles)
+            {
+                tile.allowedTypes = TileTypeManager.GetFullRandom();
+                tile.ApplyPossibilityGradient();
+            }
         }
 
         //Select a random tile
@@ -121,9 +151,85 @@ public class WaveformCollapse : MonoBehaviour
                 }
             }
         }
+        else if(propagationMode == PropagationMode.LeastPossibleOutcomesFirst)
+        {
+            prioQueue.Clear();
+
+            for(int i=0; i < TileTypeManager.global.tileTypes.Count; i++)
+            {
+                prioQueue[i + 1] = new List<WaveformTile>();
+            }
+
+            prioQueue[5].Add(randomSelect);
+
+            if (generationMode == GenerationMode.BigBang)
+            {
+                while (PrioQueueCount() > 0)
+                {
+                    WaveformStep();
+                }
+            }
+        }
     }
 
-    public void WaveformStep()
+    private bool PrioQueueHasElements()
+    {
+        foreach(var key in prioQueue.Keys)
+        {
+            if (prioQueue[key].Count > 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private int PrioQueueCount()
+    {
+        int total = 0;
+        foreach(var key in prioQueue.Keys)
+        {
+            total += prioQueue[key].Count;
+        }
+        return total;
+    }
+
+    private WaveformTile ExtractFromPrioQueue()
+    {
+        if (propagationMode == PropagationMode.LeastPossibleOutcomesFirst)
+        {
+            int max = TileTypeManager.global.tileTypes.Count;
+            int min = 1;
+
+            for(int i=min; i <= max; i++)
+            {
+                List<WaveformTile> local = prioQueue[i];
+                if (local.Count > 0)
+                {
+                    WaveformTile ret = null;
+                    while (local.Count > 0)
+                    {
+                        if (local[0].tileType == -1)
+                        {
+                            ret = local[0];
+                            local.RemoveAt(0);
+                            return ret;
+                        }
+                        local.RemoveAt(0);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public void WaveformStepButton()
+    {
+        WaveformStep();
+    }
+
+    //Returns how many different possibilities a tile had in selection, used in StepwiseAutomaticWeighted to speed up in cases where the waveform is collapsing and slow down when there are many choices
+    public int WaveformStep()
     {
         WaveformTile next = null;
 
@@ -152,9 +258,24 @@ public class WaveformCollapse : MonoBehaviour
                 queue.RemoveAt(index);
             }
         }
+        else if (propagationMode == PropagationMode.LeastPossibleOutcomesFirst)
+        {
+            next = ExtractFromPrioQueue();
+        }
         if (next != null && next.tileType == -1)
         {
-            List<int> allowed = GetAllowedTypes(next);
+            int selectWeight = 0;
+
+            List<int> allowed;
+            if (calculationMode == CalculationMode.FullPropagation)
+            {
+                allowed = next.allowedTypes;
+            }
+            else
+            {
+                allowed = GetAllowedTypes(next);
+            }
+            selectWeight += allowed.Count * allowed.Count;
             if (allowed.Count > 0)
             {
                 AssertType(next, allowed);
@@ -163,7 +284,7 @@ public class WaveformCollapse : MonoBehaviour
             {
                 //Needs repair
                 //Determine the closest possible tile
-                List<WaveformTile> neighbors = GetNeighbors(next);
+                List<WaveformTile> neighbors = MapCreation.GetNeighbors(next);
                 int closest = TileTypeManager.GetClosestPossible(neighbors.Select(x => x.tileType).ToList());
                 next.tileType = closest;
                 next.UpdateMaterial();
@@ -173,8 +294,21 @@ public class WaveformCollapse : MonoBehaviour
                 {
                     neigh.tileType = -1;
                     neigh.UpdateMaterial();
-                    AddToEvaluation(neigh);
+                    AddToEvaluation(neigh, next);
+
+                    if (calculationMode == CalculationMode.FullPropagation)
+                    {
+                        fullPropagation.Add(neigh);
+                        neigh.allowedTypes = TileTypeManager.GetFullRandom();
+                    }
                 }
+
+                if (calculationMode == CalculationMode.FullPropagation)
+                {
+                    fullPropagation.Calculate();
+                }
+
+                selectWeight = 1;
             }
             if (propagationMode == PropagationMode.Circular)
             {
@@ -183,14 +317,16 @@ public class WaveformCollapse : MonoBehaviour
                     binaryTree.CopyFrom(binaryTree.moreLeaf);
                 }
             }
+            return selectWeight;
         }
         else if(next != null && next.tileType != -1)
         {
-            WaveformStep();
+            return WaveformStep();
         }
+        return 1;
     }
 
-    private void AddToEvaluation(WaveformTile tile)
+    private void AddToEvaluation(WaveformTile tile, WaveformTile origin)
     {
         if (propagationMode == PropagationMode.NeighborsQueue || propagationMode == PropagationMode.RandomNeighbor || propagationMode == PropagationMode.CompletelyRandom)
         {
@@ -201,44 +337,50 @@ public class WaveformCollapse : MonoBehaviour
             //print("Inserting neighbor with coordinates " + neigh.transform.position);
             binaryTree.Insert(tile);
         }
+        else if (propagationMode == PropagationMode.LeastPossibleOutcomesFirst && calculationMode == CalculationMode.OnEvaluation)
+        {
+            prioQueue[TileTypeManager.GetAllowedTileTypes(origin.tileType).Count].Add(tile);
+        }
     }
 
-    private void AssertType(WaveformTile tile, List<int> allowed)
+    public void AddToPrioQueue(WaveformTile tile)
+    {
+        if (tile.tileType != -1)
+        {
+            return;
+        }
+        prioQueue[tile.allowedTypes.Count].Add(tile);
+    }
+
+    public void AssertType(WaveformTile tile, List<int> allowed)
     {
         tile.tileType = SelectType(allowed);
         tile.UpdateMaterial();
-        List<WaveformTile> neighbors = GetNeighbors(tile.x, tile.y);
+        List<WaveformTile> neighbors = MapCreation.GetNeighbors(tile.x, tile.y);
         foreach (WaveformTile neigh in neighbors)
         {
-            if (neigh.tileType == -1 && propagationMode != PropagationMode.CompletelyRandom)
+            if (neigh.tileType == -1)
             {
-                AddToEvaluation(neigh);
+                if (calculationMode == CalculationMode.FullPropagation)
+                {
+                    fullPropagation.Add(neigh);
+                }
+                if (propagationMode != PropagationMode.CompletelyRandom)
+                {
+                    AddToEvaluation(neigh, tile);
+                }
             }
+        }
+
+        if (calculationMode == CalculationMode.FullPropagation)
+        {
+            fullPropagation.Calculate();
         }
     }
 
     private int SelectType(List<int> allowed)
     {
         return allowed[Random.Range(0, allowed.Count)];
-    }
-
-    private List<WaveformTile> GetNeighbors(WaveformTile tile)
-    {
-        return GetNeighbors(tile.x, tile.y);
-    }
-
-    private List<WaveformTile> GetNeighbors(int x, int y)
-    {
-        List<WaveformTile> ret = new List<WaveformTile>();
-        if (x > 0)
-            ret.Add(Get(x - 1, y));
-        if (y > 0)
-            ret.Add(Get(x, y - 1));
-        if (x + 1< maxWidth)
-            ret.Add(Get(x + 1, y));
-        if (y + 1< maxHeight)
-            ret.Add(Get(x, y + 1));
-        return ret;
     }
 
     private List<int> GetAllowedTypes(WaveformTile tile)
@@ -250,7 +392,7 @@ public class WaveformCollapse : MonoBehaviour
     private List<int> GetAllowedTypes(int x, int y)
     {
         //Get neighbors
-        List<WaveformTile> neighbors = GetNeighbors(x, y);
+        List<WaveformTile> neighbors = MapCreation.GetNeighbors(x, y);
 
         //Create a list of tileTypes that are allowed
         List<int> allowedTiles = new List<int>();
@@ -290,11 +432,6 @@ public class WaveformCollapse : MonoBehaviour
         return allowedTiles;
     }
 
-    private WaveformTile Get(int x, int y)
-    {
-        return grid[GetPosKey(x, y)];
-    }
-
     private string GetPosKey(int x, int y)
     {
         return MapCreation.GetPosKey(x, y);
@@ -328,13 +465,8 @@ public class DistanceFromStartComparer : IComparer
             }
             else
             {
-                //MonoBehaviour.print("Comparing " + tileA.transform.position + " with " + tileB.transform.position);
-                //MonoBehaviour.print("Target coordinates = " + x + "," + y);
-
                 float distA = tileA.DistanceTo(x, y);
                 float distB = tileB.DistanceTo(x, y);
-                //MonoBehaviour.print("distA = " + distA);
-                //MonoBehaviour.print("distB = " + distB);
                 if (distA > distB)
                 {
                     return -1;

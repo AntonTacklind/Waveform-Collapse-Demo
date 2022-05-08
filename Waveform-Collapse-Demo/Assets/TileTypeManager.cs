@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class TileTypeManager : MonoBehaviour
@@ -71,5 +72,24 @@ public class TileTypeManager : MonoBehaviour
         }
 
         return total / counter;
+    }
+
+    public static List<int> GetAllowedTileTypes(List<WaveformTile> neighbors)
+    {
+        IEnumerable<int> allowed = GetFullRandom();
+        foreach (var neigh in neighbors)
+        {
+            if (neigh.tileType == -1 && neigh.allowedTypes.Count == global.tileTypes.Count)
+            {
+                //All types are allowed by this neighbor, so continue
+                continue;
+            }
+            else
+            {
+                allowed = allowed.Where(x => neigh.GetPossibleNeighbors().Contains(x));
+            }
+        }
+
+        return allowed.ToList();
     }
 }
