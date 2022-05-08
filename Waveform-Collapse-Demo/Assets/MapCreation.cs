@@ -12,19 +12,30 @@ public class MapCreation : MonoBehaviour
     private int maximumHeight = 0;
     private int maximumWidth = 0;
 
+    private bool started = false;
+
     // Start is called before the first frame update
     void Start()
     {
-        Application.targetFrameRate = 60;
+        //Application.targetFrameRate = 60;
         //GenerateGrid(3, 3);
-        GenerateGrid(10, 10);
+        //GenerateGrid(200, 200);
         //GetComponent<WaveformCollapse>().PopulateGrid(grid, currentWidth, currentHeight);
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        if (!started)
+        {
+            started = true;
+            PostStart();
+        }
+    }
+
+    public void PostStart()
+    {
+        GenerateGrid(100, 100);
     }
 
     public void RegenerateGrid()
@@ -156,6 +167,8 @@ public class MapCreation : MonoBehaviour
             maximumWidth = currentWidth;
         }
 
+        CameraHandler.SetCameraCenter(new Vector3(currentWidth / 2, currentHeight / 2, -Mathf.Max(currentWidth, currentHeight)));
+        CameraHandler.CenterCamera();
         GetComponent<WaveformCollapse>().PopulateGrid(grid, currentWidth, currentHeight);
     }
 

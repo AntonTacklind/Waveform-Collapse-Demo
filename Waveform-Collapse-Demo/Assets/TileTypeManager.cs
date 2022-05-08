@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class TileTypeManager : MonoBehaviour
 {
+    public Material defaultMaterial;
+
     [System.Serializable]
     public class TileType
     {
@@ -45,6 +47,8 @@ public class TileTypeManager : MonoBehaviour
 
     public static Material GetMaterial(int type)
     {
+        if (type == -1)
+            return global.defaultMaterial;
         return global.tileTypes[type].material;
     }
 

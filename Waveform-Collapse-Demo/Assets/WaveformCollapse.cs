@@ -55,6 +55,7 @@ public class WaveformCollapse : MonoBehaviour
         foreach(WaveformTile tile in tiles)
         {
             tile.tileType = -1;
+            tile.UpdateMaterial();
         }
 
         //Select a random tile
