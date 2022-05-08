@@ -309,6 +309,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1994227639}
   - component: {fileID: 1994227638}
+  - component: {fileID: 1994227640}
+  - component: {fileID: 1994227641}
   m_Layer: 0
   m_Name: Scriptholder
   m_TagString: Untagged
@@ -343,3 +345,43 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1994227640
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1994227637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f24bcfca3ee990448b22c65d483465f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1994227641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1994227637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe27320ddd7831e41bb27a2ff9521f67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  tileTypes:
+  - name: Deep Water
+    material: {fileID: 2100000, guid: 1435ae59af88a484c92e420855171fc9, type: 2}
+    allowedNeighbors: 0000000001000000
+  - name: Shallow Water
+    material: {fileID: 2100000, guid: 55d65cc2cbe289d49b7002d0da743dd5, type: 2}
+    allowedNeighbors: 000000000100000002000000
+  - name: Sand
+    material: {fileID: 2100000, guid: a2c69ddfbc6942843b79608dfcd8078b, type: 2}
+    allowedNeighbors: 010000000200000003000000
+  - name: Grass
+    material: {fileID: 2100000, guid: 7528804ca7608014b8a7b163a1264e81, type: 2}
+    allowedNeighbors: 020000000300000004000000
+  - name: Trees
+    material: {fileID: 2100000, guid: 4ef07237098aae14b969a8270cacdbf6, type: 2}
+    allowedNeighbors: 0300000004000000

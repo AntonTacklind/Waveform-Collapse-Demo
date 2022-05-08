@@ -5,7 +5,7 @@ using UnityEngine;
 public class MapCreation : MonoBehaviour
 {
     public GameObject tileBase;
-    public Dictionary<string, GameObject> grid = new Dictionary<string, GameObject>();
+    public Dictionary<string, WaveformTile> grid = new Dictionary<string, WaveformTile>();
 
     private int currentHeight = 0;
     private int currentWidth = 0;
@@ -15,8 +15,9 @@ public class MapCreation : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        GenerateGrid(3, 3);
-        GenerateGrid(2, 10);
+        //GenerateGrid(3, 3);
+        GenerateGrid(10, 10);
+        GetComponent<WaveformCollapse>().PopulateGrid(grid, currentWidth, currentHeight);
     }
 
     // Update is called once per frame
@@ -29,8 +30,6 @@ public class MapCreation : MonoBehaviour
     {
         int dX = width - currentWidth;
         int dY = height - currentHeight;
-        print("dX = " + dX);
-        print("dY = " + dY);
 
         if (dX > 0)
         {
@@ -41,9 +40,6 @@ public class MapCreation : MonoBehaviour
                 xExpand = dX - xEnable;
             else
                 xEnable = dX;
-
-            print("xEnable = " + xEnable);
-            print("xExpand = " + xExpand);
 
             //Enable loop
             //Start at i = 0 since currentWidth will be the first X-coordinate of the newly enabled tiles (currentWidth = 3 means the highest X-coordinate of any enabled tile should be 2)
@@ -66,9 +62,7 @@ public class MapCreation : MonoBehaviour
                 //Iterate over height since we wish to keep all tiles within the new Y-boundary but only enable tiles beyond the current X-boundary
                 for (int j=0; j < height; j++)
                 {
-                    string posKey = GetPosKey(newX, j);
-                    GameObject newTile = GameObject.Instantiate(tileBase, new Vector3(newX, j, 0), tileBase.transform.rotation);
-                    grid[posKey] = newTile;
+                    CreateTile(newX, j);
                 }
             }
         }
@@ -100,9 +94,6 @@ public class MapCreation : MonoBehaviour
             else
                 yEnable = dY;
 
-            print("yEnable = " + yEnable);
-            print("yExpand = " + yExpand);
-
             //Enable loop
             //Iterate over yEnable and add to currentHeight since the first tile to be enabled should have currentHeight as its Y-coordinate
             for (int i = 0; i < yEnable; i++)
@@ -124,9 +115,7 @@ public class MapCreation : MonoBehaviour
                 //Start at 0 and iterate over width since all X-space beyond width has been handled already
                 for (int j = 0; j < width; j++)
                 {
-                    string posKey = GetPosKey(j, newY);
-                    GameObject newTile = GameObject.Instantiate(tileBase, new Vector3(j, newY, 0), tileBase.transform.rotation);
-                    grid[posKey] = newTile;
+                    CreateTile(j, newY);
                 }
             }
         }
@@ -162,17 +151,26 @@ public class MapCreation : MonoBehaviour
         }
     }
 
-    public void EnableTile(GameObject obj)
+    public void CreateTile(int x, int y)
+    {
+        GameObject newTile = GameObject.Instantiate(tileBase, new Vector3(x, y, 0), tileBase.transform.rotation);
+        WaveformTile tile = newTile.GetComponent<WaveformTile>();
+        tile.x = x;
+        tile.y = y;
+        grid[GetPosKey(x, y)] = tile;
+    }
+
+    public void EnableTile(WaveformTile obj)
     {
         obj.GetComponent<Renderer>().enabled = true; ;
     }
 
-    public void DisableTile(GameObject obj)
+    public void DisableTile(WaveformTile obj)
     {
         obj.GetComponent<Renderer>().enabled = false;
     }
 
-    public string GetPosKey(int x, int y)
+    public static string GetPosKey(int x, int y)
     {
         return $"{x},{y}";
     }
