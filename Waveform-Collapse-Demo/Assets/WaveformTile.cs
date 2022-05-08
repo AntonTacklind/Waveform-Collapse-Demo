@@ -24,4 +24,13 @@ public class WaveformTile : MonoBehaviour
     {
         GetComponent<Renderer>().material = TileTypeManager.GetMaterial(tileType);
     }
+
+    public float DistanceTo(int x, int y)
+    {
+        float x2 = Mathf.Pow(this.x - x, 2);
+        float y2 = Mathf.Pow(this.y - y, 2);
+        float sq = Mathf.Sqrt(x2 + y2);
+        float ab = Mathf.Abs(sq);
+        return ab;
+    }
 }

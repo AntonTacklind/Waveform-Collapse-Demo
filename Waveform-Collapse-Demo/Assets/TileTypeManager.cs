@@ -52,8 +52,24 @@ public class TileTypeManager : MonoBehaviour
         return global.tileTypes[type].material;
     }
 
-    public static List<int> GetAllowedMaterials(int type)
+    public static List<int> GetAllowedTileTypes(int type)
     {
         return global.tileTypes[type].allowedNeighbors;
+    }
+
+    public static int GetClosestPossible(List<int> neighbors)
+    {
+        int total = 0;
+        int counter = 0;
+        foreach(int i in neighbors)
+        {
+            if (i != -1)
+            {
+                total += i;
+                counter++;
+            }
+        }
+
+        return total / counter;
     }
 }

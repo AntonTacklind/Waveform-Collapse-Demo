@@ -169,7 +169,7 @@ public class MapCreation : MonoBehaviour
 
         CameraHandler.SetCameraCenter(new Vector3(currentWidth / 2, currentHeight / 2, -Mathf.Max(currentWidth, currentHeight)));
         CameraHandler.CenterCamera();
-        GetComponent<WaveformCollapse>().PopulateGrid(grid, currentWidth, currentHeight);
+        GetComponent<WaveformCollapse>().Setup(grid, currentWidth, currentHeight);
     }
 
     public void CreateTile(int x, int y)
