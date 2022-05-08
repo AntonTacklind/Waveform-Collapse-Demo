@@ -6,9 +6,19 @@ using UnityEngine.Tilemaps;
 
 public class WaveformCollapse : MonoBehaviour
 {
+    public enum GenerationMode
+    {
+        BigBang,
+        StepwiseSmooth
+    }
+
+    public GenerationMode generationMode;
+
     private Dictionary<string, WaveformTile> grid = new Dictionary<string, WaveformTile>();
     private int maxWidth;
     private int maxHeight;
+
+    private List<WaveformTile> queue = new List<WaveformTile>();
 
     // Start is called before the first frame update
     void Start()
@@ -19,7 +29,10 @@ public class WaveformCollapse : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-
+        if (generationMode == GenerationMode.StepwiseSmooth && queue.Count > 0)
+        {
+            WaveformStep();
+        }
     }
 
     public void PopulateGrid(Dictionary<string, WaveformTile> grid, int maxWidth, int maxHeight)
@@ -49,37 +62,31 @@ public class WaveformCollapse : MonoBehaviour
         int rY = Random.Range(0, maxHeight);
 
         WaveformTile randomSelect = grid[GetPosKey(rX, rY)];
+        queue.Clear();
+        queue.Add(randomSelect);
 
-        //Select a type at random
-        int typesAmount = TileTypeManager.GetTypesAmount();
-        int randType = Random.Range(0, typesAmount);
-        randomSelect.tileType = randType;
-
-        //Add all neighbors to queue
-        List<WaveformTile> queue = new List<WaveformTile>();
-        queue.AddRange(GetNeighbors(rX, rY));
-
-        /*
-        //Assign a random type to all those neighbors
-        foreach(WaveformTile neigh in queue)
+        if (generationMode == GenerationMode.BigBang)
         {
-            List<int> allowed = GetAllowedTypes(neigh);
-            neigh.tileType = SelectType(allowed);
+            while(queue.Count > 0)
+            {
+                WaveformStep();
+            }
         }
-        */
+    }
 
-        //Assign random types until the queue is empty
-        while(queue.Count > 0)
+    public void WaveformStep()
+    {
+        int index = 0;
+        WaveformTile next = queue[index];
+        queue.RemoveAt(index);
+
+        if (next.tileType == -1)
         {
-            //int index = Random.Range(0, queue.Count);
-            int index = 0;
-            WaveformTile next = queue[index];
-            queue.RemoveAt(index);
-
             List<int> allowed = GetAllowedTypes(next);
             if (allowed.Count > 0)
             {
                 next.tileType = SelectType(allowed);
+                next.UpdateMaterial();
                 List<WaveformTile> neighbors = GetNeighbors(next.x, next.y);
                 foreach (WaveformTile neigh in neighbors)
                 {
@@ -89,21 +96,11 @@ public class WaveformCollapse : MonoBehaviour
                     }
                 }
             }
-            //queue.AddRange(neighbors);
-        }
-
-        foreach(WaveformTile tile in tiles)
-        {
-            if (tile.tileType != -1)
-            {
-                tile.UpdateMaterial();
-            }
         }
     }
 
     private int SelectType(List<int> allowed)
     {
-        print(allowed.Count);
         return allowed[Random.Range(0, allowed.Count)];
     }
 
@@ -147,6 +144,11 @@ public class WaveformCollapse : MonoBehaviour
             {
                 index++;
             }
+        }
+
+        if (allowedTiles.Count == 0)
+        {
+            allowedTiles.AddRange(TileTypeManager.GetFullRandom());
         }
 
         if (index != neighbors.Count)

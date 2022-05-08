@@ -28,6 +28,16 @@ public class TileTypeManager : MonoBehaviour
         
     }
 
+    public static List<int> GetFullRandom()
+    {
+        List<int> ret = new List<int>();
+        for(int i=0; i < global.tileTypes.Count; i++)
+        {
+            ret.Add(i);
+        }
+        return ret;
+    }
+
     public static int GetTypesAmount()
     {
         return global.tileTypes.Count;
