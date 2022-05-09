@@ -996,7 +996,10 @@ MonoBehaviour:
     allowedNeighbors: 020000000300000004000000
   - name: Trees
     material: {fileID: 2100000, guid: 4ef07237098aae14b969a8270cacdbf6, type: 2}
-    allowedNeighbors: 0300000004000000
+    allowedNeighbors: 030000000400000005000000
+  - name: Mountain
+    material: {fileID: 2100000, guid: eb581c2697314144389a7e614c503e9e, type: 2}
+    allowedNeighbors: 0400000005000000
 --- !u!114 &1994227642
 MonoBehaviour:
   m_ObjectHideFlags: 0
