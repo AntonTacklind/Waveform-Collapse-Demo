@@ -12,8 +12,10 @@ public class TileTypeManager : MonoBehaviour
     {
         public string name;
         public Material material;
-        public List<int> allowedNeighbors;
+        public List<WeightLink> allowedNeighbors;
     }
+
+    public List<List<int>> allowedNeighborCache = new List<List<int>>();
 
     public List<TileType> tileTypes;
 
@@ -23,6 +25,12 @@ public class TileTypeManager : MonoBehaviour
     void Start()
     {
         global = this;
+
+        foreach(TileType type in tileTypes)
+        {
+            List<int> allowed = type.allowedNeighbors.Select(x => x.typeId).ToList();
+            allowedNeighborCache.Add(allowed);
+        }
     }
 
     // Update is called once per frame
@@ -41,6 +49,16 @@ public class TileTypeManager : MonoBehaviour
         return ret;
     }
 
+    public static List<WeightLink> GetEvenWeightList(List<int> allowed)
+    {
+        List<WeightLink> ret = new List<WeightLink>();
+        for(int i=0; i < allowed.Count;i++)
+        {
+            ret.Add(new WeightLink { typeId = allowed[i], weight = 1});
+        }
+        return ret;
+    }
+
     public static int GetTypesAmount()
     {
         return global.tileTypes.Count;
@@ -55,7 +73,8 @@ public class TileTypeManager : MonoBehaviour
 
     public static List<int> GetAllowedTileTypes(int type)
     {
-        return global.tileTypes[type].allowedNeighbors;
+        //return global.tileTypes[type].allowedNeighbors.Select(x => x.typeId).ToList();
+        return global.allowedNeighborCache[type];
     }
 
     public static int GetClosestPossible(List<int> neighbors)
@@ -70,8 +89,14 @@ public class TileTypeManager : MonoBehaviour
                 counter++;
             }
         }
-
-        return total / counter;
+        if (counter != 0)
+        {
+            return total / counter;
+        }
+        else
+        {
+            return global.tileTypes.Count / 2;
+        }
     }
 
     public static List<int> GetAllowedTileTypes(List<WaveformTile> neighbors)
@@ -79,9 +104,11 @@ public class TileTypeManager : MonoBehaviour
         IEnumerable<int> allowed = GetFullRandom();
         foreach (var neigh in neighbors)
         {
-            if (neigh.tileType == -1 && neigh.allowedTypes.Count == global.tileTypes.Count)
+            if (neigh.tileType == -1 && (neigh.allowedTypes.Count == global.tileTypes.Count || neigh.allowedTypes.Count == 0))
             {
+                //EITHER:
                 //All types are allowed by this neighbor, so continue
+                //No types are allowed by this neighbor, which means asserting the tile in question will not change anything
                 continue;
             }
             else
@@ -91,6 +118,39 @@ public class TileTypeManager : MonoBehaviour
         }
 
         return allowed.ToList();
+    }
+
+    public static List<WeightLink> GetWeightList(WaveformTile tile, List<int> allowed)
+    {
+        List<WaveformTile> neighbors = MapCreation.GetNeighbors(tile);
+        List<WeightLink> ret = new List<WeightLink>();
+        foreach(int type in allowed)
+        {
+            WeightLink possibility = new WeightLink { typeId = type, weight = 0 };
+            foreach (WaveformTile neigh in neighbors)
+            {
+                if (neigh.tileType == -1)
+                {
+                    continue;
+                }
+                foreach(WeightLink influence in global.tileTypes[neigh.tileType].allowedNeighbors)
+                {
+                    if (influence.typeId == type)
+                    {
+                        possibility.weight += influence.weight;
+                    }
+                }
+            }
+            if (possibility.weight > 0)
+            {
+                ret.Add(possibility);
+            }
+        }
+        if (ret.Count == 0)
+        {
+            return GetEvenWeightList(allowed);
+        }
+        return ret;
     }
 
     public static int GetTileType(string name)

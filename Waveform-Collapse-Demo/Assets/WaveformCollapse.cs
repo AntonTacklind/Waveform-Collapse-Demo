@@ -146,8 +146,8 @@ public class WaveformCollapse : MonoBehaviour
             //Place a mountain at the center of each quadrant
             int quadX = maxWidth / 4;
             int quadY = maxHeight / 4;
-            List<int> mountainList = new List<int>();
-            mountainList.Add(TileTypeManager.GetTileType("Mountain"));
+            List<WeightLink> mountainList = new List<WeightLink>();
+            mountainList.Add(new WeightLink { typeId = TileTypeManager.GetTileType("Mountain"), weight = 1 });
 
             List<Vector2> mountainPositions = new List<Vector2>();
             mountainPositions.Add(new Vector2(quadX, quadY));
@@ -177,8 +177,8 @@ public class WaveformCollapse : MonoBehaviour
 
             binaryTree.comparer = new DistanceFromStartComparer(centerX, centerY);
 
-            List<int> deepWaterList = new List<int>();
-            deepWaterList.Add(TileTypeManager.GetTileType("Deep Water"));
+            List<WeightLink> deepWaterList = new List<WeightLink>();
+            deepWaterList.Add(new WeightLink { typeId = TileTypeManager.GetTileType("Deep Water"), weight = 1 });
             for(int i=0; i < tenthX; i++)
             {
                 for(int j=0; j < tenthY; j++)
@@ -330,7 +330,8 @@ public class WaveformCollapse : MonoBehaviour
             selectWeight += allowed.Count * allowed.Count;
             if (allowed.Count > 0)
             {
-                AssertType(next, allowed);
+                List<WeightLink> weights = TileTypeManager.GetWeightList(next, allowed);
+                AssertType(next, weights);
             }
             else
             {
@@ -406,9 +407,19 @@ public class WaveformCollapse : MonoBehaviour
         prioQueue[tile.allowedTypes.Count].Add(tile);
     }
 
+    public void AssertType(WaveformTile tile, List<WeightLink> weights)
+    {
+        AssertType(tile, SelectType(weights));
+    }
+
     public void AssertType(WaveformTile tile, List<int> allowed)
     {
-        tile.tileType = SelectType(allowed);
+        AssertType(tile, SelectType(allowed));
+    }
+
+    public void AssertType(WaveformTile tile, int type)
+    {
+        tile.tileType = type;
         tile.UpdateMaterial();
         List<WaveformTile> neighbors = MapCreation.GetNeighbors(tile.x, tile.y);
         foreach (WaveformTile neigh in neighbors)
@@ -435,6 +446,28 @@ public class WaveformCollapse : MonoBehaviour
     private int SelectType(List<int> allowed)
     {
         return allowed[Random.Range(0, allowed.Count)];
+    }
+
+    private int SelectType(List<WeightLink> weights)
+    {
+        int sum = 0;
+        foreach(WeightLink link in weights)
+        {
+            sum += link.weight;
+        }
+        int randomNumber = Random.Range(0, sum);
+        foreach(WeightLink link in weights)
+        {
+            if (randomNumber < link.weight)
+            {
+                return link.typeId;
+            }
+            else
+            {
+                randomNumber -= link.weight;
+            }
+        }
+        return -1;
     }
 
     private List<int> GetAllowedTypes(WaveformTile tile)
