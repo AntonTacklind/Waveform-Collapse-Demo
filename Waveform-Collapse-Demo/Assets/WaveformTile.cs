@@ -70,4 +70,9 @@ public class WaveformTile : MonoBehaviour
         float ab = Mathf.Abs(sq);
         return ab;
     }
+
+    public float DistanceTo(Vector2 vector)
+    {
+        return DistanceTo((int)vector.x, (int)vector.y);
+    }
 }

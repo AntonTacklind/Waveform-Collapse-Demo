@@ -965,9 +965,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   generationMode: 1
-  propagationMode: 4
-  calculationMode: 0
-  automaticSpeed: 15
+  propagationMode: 1
+  calculationMode: 1
+  preset: 1
+  automaticSpeed: 0.1
 --- !u!114 &1994227641
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -18,6 +18,11 @@ public class BinaryTree<T>
         {
             return;
         }
+        if (value == null)
+        {
+            value = obj;
+            return;
+        }
         int comp = comparer.Compare(value, obj);
         if (comp < 0)
         {

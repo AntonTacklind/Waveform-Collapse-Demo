@@ -29,11 +29,20 @@ public class WaveformCollapse : MonoBehaviour
         FullPropagation
     }
 
+    public enum Preset
+    {
+        NoPreset,
+        FourMountains,
+        CentralLake
+    }
+
     public GenerationMode generationMode;
     public PropagationMode propagationMode;
     public CalculationMode calculationMode;
+    public Preset preset;
 
-    public int automaticSpeed = 1;
+    public float automaticSpeed = 1;
+    private float budget = 0;
 
     private Dictionary<string, WaveformTile> grid = new Dictionary<string, WaveformTile>();
     private int maxWidth;
@@ -56,23 +65,27 @@ public class WaveformCollapse : MonoBehaviour
     {
         if (generationMode == GenerationMode.StepwiseAutomaticSmooth)
         {
-            for(int i=0; i < automaticSpeed; i++)
+            budget += automaticSpeed;
+            while(budget > 0)
             {
                 WaveformStep();
+                budget -= 1;
             }
         }
         else if(generationMode == GenerationMode.StepwiseAutomaticWeighted)
         {
-            int total = automaticSpeed;
-            while(total > 0)
+            budget += automaticSpeed;
+            while(budget > 0)
             {
-                total -= WaveformStep();
+                budget -= WaveformStep();
             }
         }
     }
 
     public void Setup(Dictionary<string, WaveformTile> grid, int maxWidth, int maxHeight)
     {
+        budget = 0;
+
         this.grid = grid;
         this.maxWidth = maxWidth;
         this.maxHeight = maxHeight;
@@ -103,71 +116,110 @@ public class WaveformCollapse : MonoBehaviour
                 tile.ApplyPossibilityGradient();
             }
         }
+        queue.Clear();
+
+        prioQueue.Clear();
+        for (int i = 0; i < TileTypeManager.global.tileTypes.Count; i++)
+        {
+            prioQueue[i + 1] = new List<WaveformTile>();
+        }
+
+        binaryTree = new BinaryTree<WaveformTile>();
+        binaryTree.comparer = new DistanceFromStartComparer(0, 0);
 
         //Select a random tile
         int rX = Random.Range(0, maxWidth);
         int rY = Random.Range(0, maxHeight);
+        WaveformTile randomSelect = null;
+        if (preset == Preset.NoPreset)
+        {
+            randomSelect = grid[GetPosKey(rX, rY)];
+            binaryTree.comparer = new DistanceFromStartComparer(rX, rY);
+        }
+        else if(preset == Preset.FourMountains)
+        {
+            if (maxWidth < 4 || maxHeight < 4)
+            {
+                throw new System.Exception("Four Mountains requires width and height to be at least 4");
+            }
 
-        WaveformTile randomSelect = grid[GetPosKey(rX, rY)];
+            //Place a mountain at the center of each quadrant
+            int quadX = maxWidth / 4;
+            int quadY = maxHeight / 4;
+            List<int> mountainList = new List<int>();
+            mountainList.Add(TileTypeManager.GetTileType("Mountain"));
+
+            List<Vector2> mountainPositions = new List<Vector2>();
+            mountainPositions.Add(new Vector2(quadX, quadY));
+            mountainPositions.Add(new Vector2(maxWidth - quadX, quadY));
+            mountainPositions.Add(new Vector2(quadX, maxHeight - quadY));
+            mountainPositions.Add(new Vector2(maxWidth - quadX, maxHeight - quadY));
+
+            binaryTree.comparer = new DistanceToOneOfMany(mountainPositions);
+
+            AssertType(grid[GetPosKey(quadX, quadY)], mountainList);
+            AssertType(grid[GetPosKey(maxWidth - quadX, quadY)], mountainList);
+            AssertType(grid[GetPosKey(quadX, maxHeight - quadY)], mountainList);
+            AssertType(grid[GetPosKey(maxWidth - quadX, maxHeight - quadY)], mountainList);
+        }
+        else if(preset == Preset.CentralLake)
+        {
+            if (maxWidth < 10 || maxHeight < 10)
+            {
+                throw new System.Exception("Central Lake requires width and height to be at least 10");
+            }
+
+            //Place a lake at the center of the map, that is 10% of the maps size
+            int tenthX = maxWidth / 10;
+            int tenthY = maxHeight / 10;
+            int centerX = maxWidth / 2;
+            int centerY = maxHeight / 2;
+
+            binaryTree.comparer = new DistanceFromStartComparer(centerX, centerY);
+
+            List<int> deepWaterList = new List<int>();
+            deepWaterList.Add(TileTypeManager.GetTileType("Deep Water"));
+            for(int i=0; i < tenthX; i++)
+            {
+                for(int j=0; j < tenthY; j++)
+                {
+                    AssertType(grid[GetPosKey(centerX + i - (tenthX / 2), centerY + j - (tenthY / 2))], deepWaterList);
+                }
+            }
+        }
 
         //Setup depending on propagation mode
         if (propagationMode == PropagationMode.NeighborsQueue || propagationMode == PropagationMode.RandomNeighbor)
         {
-            queue.Clear();
-            queue.Add(randomSelect);
-
-            if (generationMode == GenerationMode.BigBang)
+            if (randomSelect != null)
             {
-                while (queue.Count > 0)
-                {
-                    WaveformStep();
-                }
+                queue.Add(randomSelect);
             }
         }
         else if(propagationMode == PropagationMode.Circular)
         {
-            binaryTree = new BinaryTree<WaveformTile>();
-            binaryTree.value = randomSelect;
-            binaryTree.comparer = new DistanceFromStartComparer(rX, rY);
-
-            if (generationMode == GenerationMode.BigBang)
+            if (randomSelect != null)
             {
-                while (binaryTree.value != null)
-                {
-                    WaveformStep();
-                }
+                binaryTree.value = randomSelect;
             }
         }
         else if(propagationMode == PropagationMode.CompletelyRandom)
         {
-            //queue.Clear();
             queue = tiles;
-
-            if (generationMode == GenerationMode.BigBang)
-            {
-                while (queue.Count > 0)
-                {
-                    WaveformStep();
-                }
-            }
         }
         else if(propagationMode == PropagationMode.LeastPossibleOutcomesFirst)
         {
-            prioQueue.Clear();
-
-            for(int i=0; i < TileTypeManager.global.tileTypes.Count; i++)
+            if (randomSelect != null)
             {
-                prioQueue[i + 1] = new List<WaveformTile>();
+                prioQueue[5].Add(randomSelect);
             }
+        }
 
-            prioQueue[5].Add(randomSelect);
-
-            if (generationMode == GenerationMode.BigBang)
+        if (generationMode == GenerationMode.BigBang)
+        {
+            while (PrioQueueCount() > 0)
             {
-                while (PrioQueueCount() > 0)
-                {
-                    WaveformStep();
-                }
+                WaveformStep();
             }
         }
     }
@@ -310,6 +362,7 @@ public class WaveformCollapse : MonoBehaviour
 
                 selectWeight = 1;
             }
+            /*
             if (propagationMode == PropagationMode.Circular)
             {
                 if (binaryTree.value == null && binaryTree.moreLeaf != null)
@@ -317,6 +370,7 @@ public class WaveformCollapse : MonoBehaviour
                     binaryTree.CopyFrom(binaryTree.moreLeaf);
                 }
             }
+            */
             return selectWeight;
         }
         else if(next != null && next.tileType != -1)
@@ -435,55 +489,5 @@ public class WaveformCollapse : MonoBehaviour
     private string GetPosKey(int x, int y)
     {
         return MapCreation.GetPosKey(x, y);
-    }
-}
-
-
-public class DistanceFromStartComparer : IComparer
-{
-    public int x, y;
-
-    public DistanceFromStartComparer(int x, int y)
-    {
-        this.x = x;
-        this.y = y;
-    }
-
-    public int Compare(object a, object b)
-    {
-        WaveformTile tileA = (WaveformTile)a;
-        WaveformTile tileB = (WaveformTile)b;
-        if (tileA == null && tileB == null)
-        {
-            return 0;
-        }
-        else if (tileA != null)
-        {
-            if (tileB == null)
-            {
-                return -1;
-            }
-            else
-            {
-                float distA = tileA.DistanceTo(x, y);
-                float distB = tileB.DistanceTo(x, y);
-                if (distA > distB)
-                {
-                    return -1;
-                }
-                else if (distA == distB)
-                {
-                    return 0;
-                }
-                else
-                {
-                    return 1;
-                }
-            }
-        }
-        else
-        {
-            return 1;
-        }
     }
 }

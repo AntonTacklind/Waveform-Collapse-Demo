@@ -92,4 +92,14 @@ public class TileTypeManager : MonoBehaviour
 
         return allowed.ToList();
     }
+
+    public static int GetTileType(string name)
+    {
+        for(int i=0; i < global.tileTypes.Count; i++)
+        {
+            if (global.tileTypes[i].name == name)
+                return i;
+        }
+        return -1;
+    }
 }
