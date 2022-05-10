@@ -3168,7 +3168,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   generationMode: 1
-  propagationMode: 1
+  propagationMode: 2
   calculationMode: 1
   preset: 0
   automaticSpeed: 15
@@ -3188,7 +3188,7 @@ MonoBehaviour:
   tileTypes:
   - name: Deep Water
     material: {fileID: 2100000, guid: 1435ae59af88a484c92e420855171fc9, type: 2}
-    proportionWeight: 50
+    proportionWeight: 10
     allowedNeighbors:
     - typeId: 0
       weight: 1
@@ -3196,7 +3196,7 @@ MonoBehaviour:
       weight: 2
   - name: Shallow Water
     material: {fileID: 2100000, guid: 55d65cc2cbe289d49b7002d0da743dd5, type: 2}
-    proportionWeight: 70
+    proportionWeight: 20
     allowedNeighbors:
     - typeId: 0
       weight: 1
@@ -3209,11 +3209,13 @@ MonoBehaviour:
     proportionWeight: 5
     allowedNeighbors:
     - typeId: 1
-      weight: 2
+      weight: 20
     - typeId: 2
-      weight: 1
+      weight: 10
     - typeId: 3
-      weight: 2
+      weight: 20
+    - typeId: 6
+      weight: 1
   - name: Grass
     material: {fileID: 2100000, guid: 7528804ca7608014b8a7b163a1264e81, type: 2}
     proportionWeight: 40
@@ -3242,6 +3244,14 @@ MonoBehaviour:
       weight: 2
     - typeId: 5
       weight: 1
+  - name: Desert
+    material: {fileID: 2100000, guid: cb5625a145da93648815fab0047f1cbe, type: 2}
+    proportionWeight: 10
+    allowedNeighbors:
+    - typeId: 2
+      weight: 1
+    - typeId: 6
+      weight: 2
 --- !u!114 &1994227642
 MonoBehaviour:
   m_ObjectHideFlags: 0

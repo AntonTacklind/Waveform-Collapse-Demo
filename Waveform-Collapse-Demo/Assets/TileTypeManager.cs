@@ -233,4 +233,87 @@ public class TileTypeManager : MonoBehaviour
         }
         print("Total placed : " + global.placed);
     }
+
+    public static int GetClosestTileType(List<WaveformTile> neighbors)
+    {
+        print("GetClosestTileType");
+        print("Neighbors:");
+        foreach(WaveformTile neigh in neighbors)
+        {
+            print(global.tileTypes[neigh.tileType].name);
+        }
+        int lowestDistance = int.MaxValue;
+        int type = 0;
+        for(int i=0; i < global.tileTypes.Count; i++)
+        {
+            int totalDistance = 0;
+            foreach(var neighbor in neighbors)
+            {
+                int subDistance = GetTypeDistance(i, neighbor.tileType);
+                print("Total distance of " + global.tileTypes[neighbor.tileType].name + " for " + global.tileTypes[i].name + " : " + subDistance);
+                if (subDistance == int.MaxValue)
+                {
+                    totalDistance = int.MaxValue;
+                    break;
+                }
+                else
+                {
+                    totalDistance += subDistance;
+                }
+            }
+            print("Total distance for " + global.tileTypes[i].name + " : " + totalDistance);
+            if (totalDistance < lowestDistance)
+            {
+                lowestDistance = totalDistance;
+                type = i;
+            }
+        }
+        print("Shortest distance : " + global.tileTypes[type].name + " at " + lowestDistance);
+        return type;
+    }
+
+    public static int GetTypeDistance(int from, int to)
+    {
+        if (from == to)
+        {
+            return 0;
+        }
+        int steps = 1;
+        List<int> queue = new List<int>();
+        List<int> nextQueue = new List<int>();
+        Dictionary<int, bool> visited = new Dictionary<int, bool>();
+        queue.Add(from);
+        visited[from] = true;
+        while(queue.Count > 0)
+        {
+            int pop = queue[0];
+            queue.RemoveAt(0);
+
+            TileType type = global.tileTypes[pop];
+            foreach(var link in type.allowedNeighbors)
+            {
+                if (link.typeId == to)
+                {
+                    return steps;
+                }
+                else if (visited.ContainsKey(link.typeId))
+                {
+                    continue;
+                }
+                else
+                {
+                    nextQueue.Add(link.typeId);
+                    visited[link.typeId] = true;
+                }
+            }
+
+            if (queue.Count == 0 && nextQueue.Count > 0)
+            {
+                queue = nextQueue;
+                nextQueue = new List<int>();
+                steps++;
+            }
+        }
+        return int.MaxValue;
+    }
 }

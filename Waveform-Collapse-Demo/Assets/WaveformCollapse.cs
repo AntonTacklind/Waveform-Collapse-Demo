@@ -351,7 +351,8 @@ public class WaveformCollapse : MonoBehaviour
                 //Needs repair
                 //Determine the closest possible tile
                 List<WaveformTile> neighbors = MapCreation.GetNeighbors(next);
-                int closest = TileTypeManager.GetClosestPossible(neighbors.Select(x => x.tileType).ToList());
+                //int closest = TileTypeManager.GetClosestPossible(neighbors.Select(x => x.tileType).ToList());
+                int closest = TileTypeManager.GetClosestTileType(neighbors.Where(x => x.tileType != -1).ToList());
                 next.tileType = closest;
                 next.UpdateMaterial();
 
