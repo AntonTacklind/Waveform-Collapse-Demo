@@ -12,12 +12,17 @@ public class TileTypeManager : MonoBehaviour
     {
         public string name;
         public Material material;
+        public int proportionWeight;
         public List<WeightLink> allowedNeighbors;
     }
 
     public List<List<int>> allowedNeighborCache = new List<List<int>>();
 
     public List<TileType> tileTypes;
+
+    private List<int> tileTypeProportions;
+    private int placed;
+    private int proportionSum = 0;
 
     public static TileTypeManager global;
 
@@ -26,10 +31,16 @@ public class TileTypeManager : MonoBehaviour
     {
         global = this;
 
-        foreach(TileType type in tileTypes)
+        tileTypeProportions = new List<int>();
+
+        foreach (TileType type in tileTypes)
         {
             List<int> allowed = type.allowedNeighbors.Select(x => x.typeId).ToList();
             allowedNeighborCache.Add(allowed);
+
+            tileTypeProportions.Add(0);
+
+            proportionSum += type.proportionWeight;
         }
     }
 
@@ -172,5 +183,54 @@ public class TileTypeManager : MonoBehaviour
                 return i;
         }
         return -1;
+    }
+
+    public static void ResetProportions()
+    {
+        for(int i=0; i < global.tileTypes.Count; i++)
+        {
+            global.tileTypeProportions[i] = 0;
+        }
+        global.placed = 0;
+    }
+
+    public static void Placed(int type)
+    {
+        global.placed++;
+        global.tileTypeProportions[type]++;
+    }
+
+    public static float GetProportionalFactor(int type)
+    {
+        //float total = MapCreation.GetTotalCurrentTiles();
+        float current = global.tileTypeProportions[type];
+        if (current == 0)
+        {
+            return global.tileTypes[type].proportionWeight; //Used for divide-by-zero reasons, also increases the likelihood of initially placing tiles with higher proportion weight
+        }
+        float target = global.tileTypes[type].proportionWeight;
+        float placedFloat = global.placed;
+        float sumFloat = global.proportionSum;
+
+        float placedFraction = current / placedFloat;
+        float targetFraction = target / sumFloat;
+
+        return targetFraction / placedFraction;
+    }
+
+    public static void PrintFinalProportions()
+    {
+        print("Final Proportions:");
+        for(int i=0; i < global.tileTypes.Count; i++)
+        {
+            float current = global.tileTypeProportions[i];
+            float placedFloat = global.placed;
+            float placedFraction = current / placedFloat;
+            float target = global.tileTypes[i].proportionWeight;
+            float sumFloat = global.proportionSum;
+            float targetFraction = target / sumFloat;
+            print("" + global.tileTypes[i].name + " : " + placedFraction + " (" + current + "), target fraction : " + targetFraction);
+        }
+        print("Total placed : " + global.placed);
     }
 }

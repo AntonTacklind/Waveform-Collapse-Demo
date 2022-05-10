@@ -93,6 +93,8 @@ public class WaveformCollapse : MonoBehaviour
         this.maxWidth = maxWidth;
         this.maxHeight = maxHeight;
 
+        TileTypeManager.ResetProportions();
+
         //Create an array with all the tiles in it
         List<WaveformTile> tiles = new List<WaveformTile>();
         for(int i=0; i < maxWidth; i++)
@@ -222,6 +224,8 @@ public class WaveformCollapse : MonoBehaviour
         if (generationMode == GenerationMode.BigBang)
         {
             BigBang();
+
+            TileTypeManager.PrintFinalProportions();
         }
     }
 
@@ -431,6 +435,7 @@ public class WaveformCollapse : MonoBehaviour
     {
         tile.tileType = type;
         tile.UpdateMaterial();
+        TileTypeManager.Placed(type);
         List<WaveformTile> neighbors = MapCreation.GetNeighbors(tile.x, tile.y);
         foreach (WaveformTile neigh in neighbors)
         {
@@ -564,21 +569,34 @@ public class WaveformCollapse : MonoBehaviour
 
     private int SelectType(List<WeightLink> weights)
     {
-        int sum = 0;
+        float sum = 0;
         foreach(WeightLink link in weights)
         {
-            sum += link.weight;
+            float proportionFactor = TileTypeManager.GetProportionalFactor(link.typeId);
+            float weightFloat = link.weight;
+            float weightProduct = weightFloat * proportionFactor;
+            sum += weightProduct;
         }
-        int randomNumber = Random.Range(0, sum);
+        float randomNumber = Random.Range(0, sum);
         foreach(WeightLink link in weights)
         {
-            if (randomNumber < link.weight)
+            float proportionFactor = TileTypeManager.GetProportionalFactor(link.typeId);
+            float weightFloat = link.weight;
+            float weightProduct = weightFloat * proportionFactor;
+            if (randomNumber < weightProduct)
             {
                 return link.typeId;
             }
             else
             {
-                randomNumber -= link.weight;
+                randomNumber -= weightProduct;
+            }
+        }
+        foreach(WeightLink link in weights)
+        {
+            if (link.weight > 0)
+            {
+                return link.typeId;
             }
         }
         return -1;

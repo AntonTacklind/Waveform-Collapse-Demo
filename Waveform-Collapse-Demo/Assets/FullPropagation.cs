@@ -46,16 +46,16 @@ public class FullPropagation : MonoBehaviour
                 //This will add neighbors to this queue as well, and handle possible additions to the propagation modes order container
                 waveformCollapse.AssertType(tile, allowedTypes);
             }
-            else if (tile.tileType == -1)
-            {
-                tile.allowedTypes = allowedTypes;
-                tile.ApplyPossibilityGradient();
-            }
 
             if (tile.allowedTypes.Count > allowedTypes.Count || previousType != tile.tileType)
             {
+                if (tile.tileType == -1)
+                {
+                    tile.allowedTypes = allowedTypes;
+                    tile.ApplyPossibilityGradient();
+                }
                 //The amount of allowedTypes has been restricted or the tile has been updated, so this nodes neighbors must be updated, if they dont already have a tileType
-                foreach(var neigh in neighbors)
+                foreach (var neigh in neighbors)
                 {
                     if (neigh.tileType == -1)
                     {
@@ -67,6 +67,11 @@ public class FullPropagation : MonoBehaviour
                 {
                     waveformCollapse.AddToPrioQueue(tile);
                 }
+            }
+            else if (tile.tileType == -1)
+            {
+                tile.allowedTypes = allowedTypes;
+                tile.ApplyPossibilityGradient();
             }
         }
     }

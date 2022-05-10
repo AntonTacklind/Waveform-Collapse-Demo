@@ -3168,7 +3168,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   generationMode: 1
-  propagationMode: 2
+  propagationMode: 1
   calculationMode: 1
   preset: 0
   automaticSpeed: 15
@@ -3188,6 +3188,7 @@ MonoBehaviour:
   tileTypes:
   - name: Deep Water
     material: {fileID: 2100000, guid: 1435ae59af88a484c92e420855171fc9, type: 2}
+    proportionWeight: 50
     allowedNeighbors:
     - typeId: 0
       weight: 1
@@ -3195,6 +3196,7 @@ MonoBehaviour:
       weight: 2
   - name: Shallow Water
     material: {fileID: 2100000, guid: 55d65cc2cbe289d49b7002d0da743dd5, type: 2}
+    proportionWeight: 70
     allowedNeighbors:
     - typeId: 0
       weight: 1
@@ -3204,6 +3206,7 @@ MonoBehaviour:
       weight: 1
   - name: Sand
     material: {fileID: 2100000, guid: a2c69ddfbc6942843b79608dfcd8078b, type: 2}
+    proportionWeight: 5
     allowedNeighbors:
     - typeId: 1
       weight: 2
@@ -3213,6 +3216,7 @@ MonoBehaviour:
       weight: 2
   - name: Grass
     material: {fileID: 2100000, guid: 7528804ca7608014b8a7b163a1264e81, type: 2}
+    proportionWeight: 40
     allowedNeighbors:
     - typeId: 2
       weight: 1
@@ -3222,6 +3226,7 @@ MonoBehaviour:
       weight: 2
   - name: Trees
     material: {fileID: 2100000, guid: 4ef07237098aae14b969a8270cacdbf6, type: 2}
+    proportionWeight: 20
     allowedNeighbors:
     - typeId: 3
       weight: 1
@@ -3231,6 +3236,7 @@ MonoBehaviour:
       weight: 1
   - name: Mountain
     material: {fileID: 2100000, guid: eb581c2697314144389a7e614c503e9e, type: 2}
+    proportionWeight: 10
     allowedNeighbors:
     - typeId: 4
       weight: 2

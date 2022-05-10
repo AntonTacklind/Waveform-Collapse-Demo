@@ -251,4 +251,9 @@ public class MapCreation : MonoBehaviour
             ret.Add(Get(x, y + 1));
         return ret;
     }
+
+    public static int GetTotalCurrentTiles()
+    {
+        return global.currentWidth * global.currentHeight;
+    }
 }
