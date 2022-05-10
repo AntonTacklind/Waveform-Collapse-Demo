@@ -38,28 +38,29 @@ public class FullPropagation : MonoBehaviour
             List<WaveformTile> neighbors = MapCreation.GetNeighbors(tile);
 
             List<int> allowedTypes = TileTypeManager.GetAllowedTileTypes(neighbors);
+            int previousType = tile.tileType;
 
-            if (tile.allowedTypes.Count > allowedTypes.Count)
+            if (allowedTypes.Count == 1 && tile.tileType == -1)
             {
-                //The amount of allowedTypes has been restricted, so this nodes neighbors must be updated, if they dont already have a tileType
+                //Assert type, since only 1 is possible
+                //This will add neighbors to this queue as well, and handle possible additions to the propagation modes order container
+                waveformCollapse.AssertType(tile, allowedTypes);
+            }
+            else if (tile.tileType == -1)
+            {
+                tile.allowedTypes = allowedTypes;
+                tile.ApplyPossibilityGradient();
+            }
+
+            if (tile.allowedTypes.Count > allowedTypes.Count || previousType != tile.tileType)
+            {
+                //The amount of allowedTypes has been restricted or the tile has been updated, so this nodes neighbors must be updated, if they dont already have a tileType
                 foreach(var neigh in neighbors)
                 {
                     if (neigh.tileType == -1)
                     {
                         Add(neigh);
                     }
-                }
-
-                if (allowedTypes.Count == 1)
-                {
-                    //Assert type, since only 1 is possible
-                    //This will add neighbors to this queue as well, and handle possible additions to the propagation modes order container
-                    waveformCollapse.AssertType(tile, allowedTypes);
-                }
-                else
-                {
-                    tile.allowedTypes = allowedTypes;
-                    tile.ApplyPossibilityGradient();
                 }
 
                 if (waveformCollapse.propagationMode == WaveformCollapse.PropagationMode.LeastPossibleOutcomesFirst)

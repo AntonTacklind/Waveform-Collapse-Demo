@@ -8,6 +8,7 @@ public class WaveformTile : MonoBehaviour
     public int tileType;
     public int x;
     public int y;
+    public bool forced = false;
 
     public List<int> allowedTypes = new List<int>();
 
@@ -74,5 +75,22 @@ public class WaveformTile : MonoBehaviour
     public float DistanceTo(Vector2 vector)
     {
         return DistanceTo((int)vector.x, (int)vector.y);
+    }
+
+    //Returns true if the Tile was reset (if forced is not true)
+    //Otherwise returns false
+    public bool Reset()
+    {
+        if (forced)
+        {
+            return false;
+        }
+        else
+        {
+            tileType = -1;
+            UpdateMaterial();
+            ApplyPossibilityGradient();
+            return true;
+        }
     }
 }

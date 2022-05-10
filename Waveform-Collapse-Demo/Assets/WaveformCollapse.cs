@@ -54,9 +54,12 @@ public class WaveformCollapse : MonoBehaviour
 
     private FullPropagation fullPropagation;
 
+    public static WaveformCollapse global;
+
     // Start is called before the first frame update
     void Start()
     {
+        global = this;
         fullPropagation = GetComponent<FullPropagation>();
     }
 
@@ -106,6 +109,7 @@ public class WaveformCollapse : MonoBehaviour
             tile.tileType = -1;
             tile.UpdateMaterial();
             tile.allowedTypes.Clear();
+            tile.forced = false;
         }
 
         if (calculationMode == CalculationMode.FullPropagation)
@@ -125,7 +129,7 @@ public class WaveformCollapse : MonoBehaviour
         }
 
         binaryTree = new BinaryTree<WaveformTile>();
-        binaryTree.comparer = new DistanceFromStartComparer(0, 0);
+        BinaryTree<WaveformTile>.comparer = new DistanceFromStartComparer(0, 0);
 
         //Select a random tile
         int rX = Random.Range(0, maxWidth);
@@ -134,7 +138,7 @@ public class WaveformCollapse : MonoBehaviour
         if (preset == Preset.NoPreset)
         {
             randomSelect = grid[GetPosKey(rX, rY)];
-            binaryTree.comparer = new DistanceFromStartComparer(rX, rY);
+            BinaryTree<WaveformTile>.comparer = new DistanceFromStartComparer(rX, rY);
         }
         else if(preset == Preset.FourMountains)
         {
@@ -155,7 +159,7 @@ public class WaveformCollapse : MonoBehaviour
             mountainPositions.Add(new Vector2(quadX, maxHeight - quadY));
             mountainPositions.Add(new Vector2(maxWidth - quadX, maxHeight - quadY));
 
-            binaryTree.comparer = new DistanceToOneOfMany(mountainPositions);
+            BinaryTree<WaveformTile>.comparer = new DistanceToOneOfMany(mountainPositions);
 
             AssertType(grid[GetPosKey(quadX, quadY)], mountainList);
             AssertType(grid[GetPosKey(maxWidth - quadX, quadY)], mountainList);
@@ -175,7 +179,7 @@ public class WaveformCollapse : MonoBehaviour
             int centerX = maxWidth / 2;
             int centerY = maxHeight / 2;
 
-            binaryTree.comparer = new DistanceFromStartComparer(centerX, centerY);
+            BinaryTree<WaveformTile>.comparer = new DistanceFromStartComparer(centerX, centerY);
 
             List<WeightLink> deepWaterList = new List<WeightLink>();
             deepWaterList.Add(new WeightLink { typeId = TileTypeManager.GetTileType("Deep Water"), weight = 1 });
@@ -217,10 +221,15 @@ public class WaveformCollapse : MonoBehaviour
 
         if (generationMode == GenerationMode.BigBang)
         {
-            while (PrioQueueCount() > 0)
-            {
-                WaveformStep();
-            }
+            BigBang();
+        }
+    }
+
+    private void BigBang()
+    {
+        while (PrioQueueCount() > 0 || queue.Count > 0 || binaryTree.value != null)
+        {
+            WaveformStep();
         }
     }
 
@@ -325,7 +334,7 @@ public class WaveformCollapse : MonoBehaviour
             }
             else
             {
-                allowed = GetAllowedTypes(next);
+                allowed = TileTypeManager.GetAllowedTileTypes(next);
             }
             selectWeight += allowed.Count * allowed.Count;
             if (allowed.Count > 0)
@@ -345,14 +354,15 @@ public class WaveformCollapse : MonoBehaviour
                 //Reset neighbors and add to evaluation
                 foreach(WaveformTile neigh in neighbors)
                 {
-                    neigh.tileType = -1;
-                    neigh.UpdateMaterial();
-                    AddToEvaluation(neigh, next);
-
-                    if (calculationMode == CalculationMode.FullPropagation)
+                    if (neigh.Reset())
                     {
-                        fullPropagation.Add(neigh);
-                        neigh.allowedTypes = TileTypeManager.GetFullRandom();
+                        AddToEvaluation(neigh, next);
+
+                        if (calculationMode == CalculationMode.FullPropagation)
+                        {
+                            fullPropagation.Add(neigh);
+                            neigh.allowedTypes = TileTypeManager.GetFullRandom();
+                        }
                     }
                 }
 
@@ -443,6 +453,110 @@ public class WaveformCollapse : MonoBehaviour
         }
     }
 
+    private List<WaveformTile> cascadeQueue;
+    private WaveformTile cascadeTile;
+
+    public void CleansingCascade(WaveformTile tile, int type)
+    {
+        //Assert type
+        tile.tileType = type;
+        tile.UpdateMaterial();
+
+        cascadeQueue = MapCreation.GetNeighbors(tile);
+        cascadeTile = tile;
+        if (!(propagationMode == PropagationMode.CompletelyRandom || propagationMode == PropagationMode.LeastPossibleOutcomesFirst))
+        {
+            if (propagationMode == PropagationMode.Circular)
+            {
+                BinaryTree<WaveformTile>.comparer = new DistanceFromStartComparer(tile.x, tile.y);
+            }
+            foreach(var touched in cascadeQueue)
+            {
+                AddToEvaluation(touched, tile);
+            }
+        }
+        int loopBreak = 0;
+        while (cascadeQueue.Count > 0 && loopBreak < 200)
+        {
+            CascadeStep();
+            //loopBreak++;
+        }
+
+        if (calculationMode == CalculationMode.FullPropagation)
+        {
+            fullPropagation.Calculate();
+        }
+
+        if (generationMode == GenerationMode.BigBang)
+        {
+            BigBang();
+        }
+    }
+
+    public void CascadeStep()
+    {
+        if (cascadeQueue.Count == 0)
+        {
+            //print("Cascade over");
+            return;
+        }
+        WaveformTile touched = cascadeQueue[0];
+        cascadeQueue.RemoveAt(0);
+        //print("CASCADE : Starting with " + touched.transform.position);
+
+        int previousAllowedCount = touched.allowedTypes.Count;
+        List<int> allowed = TileTypeManager.GetAllowedTileTypes(touched, debug: true);
+        if (allowed.Count == 0 || !allowed.Contains(touched.tileType))
+        {
+            //It cannot be anything, or it cannot be what it is, reset it if possible
+            if (touched.Reset())
+            {
+                if (propagationMode == PropagationMode.CompletelyRandom || propagationMode == PropagationMode.LeastPossibleOutcomesFirst)
+                {
+                    AddToEvaluation(touched, cascadeTile);
+                }
+                //Can it be anything?
+                if (allowed.Count > 0)
+                {
+                    //Ok, then its neighbors can be what they are without issue, for the moment being
+                    //Update its allowedTypes
+                    touched.allowedTypes = allowed;
+                    touched.ApplyPossibilityGradient();
+                }
+                if (allowed.Count == 0 || (allowed.Count != previousAllowedCount && previousAllowedCount != 0))
+                {
+                    //It's impossible for it to be what it is, or the amount of allowed types was not the same as it previously was (the neighbors have been updated, so this should be updated as well
+                    //Reset its neighbors, update its allowed types, and add the neighbors to the cascade if they were not reset
+                    List<WaveformTile> neighbors = MapCreation.GetNeighbors(touched);
+                    foreach (var neigh in neighbors)
+                    {
+                        if (neigh.tileType != -1 || 1 == 1)
+                        {
+                            int previousTileType = neigh.tileType;
+                            if (previousTileType != -1)
+                            {
+                                neigh.allowedTypes.Clear();
+                            }
+                            if (neigh.Reset())
+                            {
+                                cascadeQueue.Add(neigh);
+                            }
+                        }
+                    }
+
+                    if (allowed.Count == 0)
+                    {
+                        //print("CASCADE : Refreshing touched allowed types");
+                        touched.allowedTypes = TileTypeManager.GetAllowedTileTypes(touched, debug: true);
+                        touched.ApplyPossibilityGradient();
+                    }
+                }
+            }
+        }
+        //print("CASCADE : Finished with " + touched.transform.position);
+        //print("allowedTypes.Count = " + touched.allowedTypes.Count);
+    }
+
     private int SelectType(List<int> allowed)
     {
         return allowed[Random.Range(0, allowed.Count)];
@@ -468,55 +582,6 @@ public class WaveformCollapse : MonoBehaviour
             }
         }
         return -1;
-    }
-
-    private List<int> GetAllowedTypes(WaveformTile tile)
-    {
-        return GetAllowedTypes(tile.x, tile.y);
-    }
-
-    //Determines what material a tile should have, based on its neighbors
-    private List<int> GetAllowedTypes(int x, int y)
-    {
-        //Get neighbors
-        List<WaveformTile> neighbors = MapCreation.GetNeighbors(x, y);
-
-        //Create a list of tileTypes that are allowed
-        List<int> allowedTiles = new List<int>();
-        int index = 0;
-
-        while(allowedTiles.Count == 0 && index < neighbors.Count)
-        {
-            WaveformTile neighbor = neighbors[index];
-            if (neighbor.tileType != -1)
-            {
-                allowedTiles.AddRange(TileTypeManager.GetAllowedTileTypes(neighbor.tileType));
-            }
-            else
-            {
-                index++;
-            }
-        }
-
-        if (allowedTiles.Count == 0)
-        {
-            allowedTiles.AddRange(TileTypeManager.GetFullRandom());
-        }
-        if (index != neighbors.Count)
-        {
-            //Iterate through the rest of the neighbors, and ensure that the allowedTiles contain only tiles that are allowed by all neighbors
-            for(int i=index; i < neighbors.Count; i++)
-            {
-                int tileType = neighbors[i].tileType;
-                if (tileType != -1)
-                {
-                    List<int> nAllow = TileTypeManager.GetAllowedTileTypes(tileType);
-                    allowedTiles = allowedTiles.Where(x => nAllow.Contains(x)).ToList();
-                }
-            }
-        }
-
-        return allowedTiles;
     }
 
     private string GetPosKey(int x, int y)

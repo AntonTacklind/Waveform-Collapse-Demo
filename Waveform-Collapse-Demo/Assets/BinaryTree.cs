@@ -8,7 +8,7 @@ public class BinaryTree<T>
     public BinaryTree<T> lessLeaf;
     public BinaryTree<T> moreLeaf;
     public T value;
-    public IComparer comparer;
+    public static IComparer comparer;
     public bool withered = false;
 
     public void Insert(T obj)
@@ -31,7 +31,6 @@ public class BinaryTree<T>
                 lessLeaf = new BinaryTree<T>();
                 lessLeaf.parent = this;
                 lessLeaf.value = obj;
-                lessLeaf.comparer = comparer;
             }
             else
             {
@@ -45,7 +44,6 @@ public class BinaryTree<T>
                 moreLeaf = new BinaryTree<T>();
                 moreLeaf.parent = this;
                 moreLeaf.value = obj;
-                moreLeaf.comparer = comparer;
             }
             else
             {
@@ -104,6 +102,5 @@ public class BinaryTree<T>
         lessLeaf = other.lessLeaf;
         value = other.value;
         moreLeaf = other.moreLeaf;
-        comparer = other.comparer;
     }
 }

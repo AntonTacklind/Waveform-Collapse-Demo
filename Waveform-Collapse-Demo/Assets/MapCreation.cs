@@ -1,16 +1,22 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class MapCreation : MonoBehaviour
 {
     public GameObject tileBase;
     public Dictionary<string, WaveformTile> grid = new Dictionary<string, WaveformTile>();
 
+    public Text widthTextObject;
+    public Text heightTextObject;
+
     private int currentHeight = 0;
     private int currentWidth = 0;
     private int maximumHeight = 0;
     private int maximumWidth = 0;
+    private int DEFAULT_WIDTH = 10;
+    private int DEFAULT_HEIGHT = 10;
 
     private bool started = false;
 
@@ -39,12 +45,23 @@ public class MapCreation : MonoBehaviour
 
     public void PostStart()
     {
-        GenerateGrid(100, 100);
+        GenerateGrid(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     }
 
     public void RegenerateGrid()
     {
-        GenerateGrid(currentWidth, currentHeight);
+        int newWidth, newHeight;
+        string widthString = widthTextObject.text;
+        string heightString = heightTextObject.text;
+        if (!int.TryParse(widthString, out newWidth))
+        {
+            newWidth = DEFAULT_WIDTH;
+        }
+        if (!int.TryParse(heightString, out newHeight))
+        {
+            newHeight = DEFAULT_HEIGHT;
+        }
+        GenerateGrid(newWidth, newHeight);
     }
 
     public void GenerateGrid(int width, int height)
@@ -62,13 +79,15 @@ public class MapCreation : MonoBehaviour
             else
                 xEnable = dX;
 
+            int enableHeight = Mathf.Min(maximumHeight, currentHeight + dY);
+
             //Enable loop
             //Start at i = 0 since currentWidth will be the first X-coordinate of the newly enabled tiles (currentWidth = 3 means the highest X-coordinate of any enabled tile should be 2)
             for (int i=0; i < xEnable; i++)
             {
                 int newX = currentWidth + i;
-                //Iterate over height since we wish to keep all tiles within the new Y-boundary but only enable tiles beyond the current X-boundary
-                for (int j=0; j < height; j++)
+                //Iterate over enableHeight since we wish to keep all tiles within the new Y-boundary but only enable tiles beyond the current X-boundary
+                for (int j=0; j < enableHeight; j++)
                 {
                     string posKey = GetPosKey(newX, j);
                     EnableTile(grid[posKey]);
@@ -98,6 +117,7 @@ public class MapCreation : MonoBehaviour
                 for (int j=0; j < currentHeight; j++)
                 {
                     string posKey = GetPosKey(newX, j);
+                    print("DISABLING " + posKey);
                     DisableTile(grid[posKey]);
                 }
             }
@@ -115,26 +135,34 @@ public class MapCreation : MonoBehaviour
             else
                 yEnable = dY;
 
+            int relevantWidth = currentWidth;
+            if (dX < 0)
+            {
+                relevantWidth = width;
+            }
+
             //Enable loop
             //Iterate over yEnable and add to currentHeight since the first tile to be enabled should have currentHeight as its Y-coordinate
             for (int i = 0; i < yEnable; i++)
             {
                 int newY = currentHeight + i;
-                //Start at 0 and iterate over width since all X-space beyond width has been handled already
-                for (int j = 0; j < width; j++)
+                //Start at 0 and iterate over currentWidth since all X-space beyond width has been handled already
+                for (int j = 0; j < relevantWidth; j++)
                 {
                     string posKey = GetPosKey(j, newY);
                     EnableTile(grid[posKey]);
                 }
             }
 
+            int expandWidth = Mathf.Min(maximumWidth, currentWidth + dX);
+
             //Expand loop
             //Iterate over yExpand and add to maximumHeight since the first tile to be enabled should have maximumHeight as its Y-coordinate
             for (int i = 0; i < yExpand; i++)
             {
                 int newY = maximumHeight + i;
-                //Start at 0 and iterate over width since all X-space beyond width has been handled already
-                for (int j = 0; j < width; j++)
+                //Start at 0 and iterate over expandWidth since all Y-space above the X-space that was enabled has not been handled
+                for (int j = 0; j < expandWidth; j++)
                 {
                     CreateTile(j, newY);
                 }
@@ -187,7 +215,7 @@ public class MapCreation : MonoBehaviour
 
     public void EnableTile(WaveformTile obj)
     {
-        obj.GetComponent<Renderer>().enabled = true; ;
+        obj.GetComponent<Renderer>().enabled = true;
     }
 
     public void DisableTile(WaveformTile obj)

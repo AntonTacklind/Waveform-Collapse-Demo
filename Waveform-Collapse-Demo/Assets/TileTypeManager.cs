@@ -99,7 +99,12 @@ public class TileTypeManager : MonoBehaviour
         }
     }
 
-    public static List<int> GetAllowedTileTypes(List<WaveformTile> neighbors)
+    public static List<int> GetAllowedTileTypes(WaveformTile tile, bool debug = false)
+    {
+        return GetAllowedTileTypes(MapCreation.GetNeighbors(tile), debug);
+    }
+
+    public static List<int> GetAllowedTileTypes(List<WaveformTile> neighbors, bool debug = false)
     {
         IEnumerable<int> allowed = GetFullRandom();
         foreach (var neigh in neighbors)
@@ -113,6 +118,12 @@ public class TileTypeManager : MonoBehaviour
             }
             else
             {
+                /*
+                if (debug)
+                {
+                    print("POSSIBLE NEIGHBORS FROM " + neigh.transform.position + " | " + string.Join(",", neigh.GetPossibleNeighbors()));
+                }
+                */
                 allowed = allowed.Where(x => neigh.GetPossibleNeighbors().Contains(x));
             }
         }
