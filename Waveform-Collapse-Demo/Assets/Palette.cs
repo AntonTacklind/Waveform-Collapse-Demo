@@ -56,7 +56,7 @@ public class Palette : MonoBehaviour
                             }
                             else if (paletteMode == PaletteMode.Cascade)
                             {
-                                print("CASCADE");
+                                //print("CASCADE");
                                 WaveformCollapse.global.CleansingCascade(tile, type);
                             }
                         }

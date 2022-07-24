@@ -54,6 +54,9 @@ public class WaveformCollapse : MonoBehaviour
 
     private FullPropagation fullPropagation;
 
+    private List<WaveformTile> cascadeQueue = new();
+    private WaveformTile cascadeTile;
+
     public static WaveformCollapse global;
 
     // Start is called before the first frame update
@@ -71,7 +74,14 @@ public class WaveformCollapse : MonoBehaviour
             budget += automaticSpeed;
             while(budget > 0)
             {
-                WaveformStep();
+                if (cascadeQueue.Count > 0)
+                {
+                    CascadeStep();
+                }
+                else
+                {
+                    WaveformStep();
+                }
                 budget -= 1;
             }
         }
@@ -80,7 +90,15 @@ public class WaveformCollapse : MonoBehaviour
             budget += automaticSpeed;
             while(budget > 0)
             {
-                budget -= WaveformStep();
+                if (cascadeQueue.Count > 0)
+                {
+                    CascadeStep();
+                    budget -= 1;
+                }
+                else
+                {
+                    budget -= WaveformStep();
+                }
             }
         }
     }
@@ -290,7 +308,18 @@ public class WaveformCollapse : MonoBehaviour
 
     public void WaveformStepButton()
     {
-        WaveformStep();
+        if (cascadeQueue.Count > 0)
+        {
+            CascadeStep();
+        }
+        else
+        {
+            Debug.Log("queue.Count = " + queue.Count);
+            foreach(var entry in queue){
+                Debug.Log(entry.GetCoordinates());
+            }
+            WaveformStep();
+        }
     }
 
     //Returns how many different possibilities a tile had in selection, used in StepwiseAutomaticWeighted to speed up in cases where the waveform is collapsing and slow down when there are many choices
@@ -459,9 +488,6 @@ public class WaveformCollapse : MonoBehaviour
         }
     }
 
-    private List<WaveformTile> cascadeQueue;
-    private WaveformTile cascadeTile;
-
     public void CleansingCascade(WaveformTile tile, int type)
     {
         //Assert type
@@ -469,6 +495,10 @@ public class WaveformCollapse : MonoBehaviour
         tile.UpdateMaterial();
 
         cascadeQueue = MapCreation.GetNeighbors(tile);
+        foreach(var other in cascadeQueue)
+        {
+            other.previousTileType = -1;
+        }
         cascadeTile = tile;
         if (!(propagationMode == PropagationMode.CompletelyRandom || propagationMode == PropagationMode.LeastPossibleOutcomesFirst))
         {
@@ -481,6 +511,12 @@ public class WaveformCollapse : MonoBehaviour
                 AddToEvaluation(touched, tile);
             }
         }
+
+        if (generationMode == GenerationMode.Stepwise)
+        {
+            return;
+        }
+
         int loopBreak = 0;
         while (cascadeQueue.Count > 0 && loopBreak < 200)
         {
@@ -512,31 +548,33 @@ public class WaveformCollapse : MonoBehaviour
 
         int previousAllowedCount = touched.allowedTypes.Count;
         List<int> allowed = TileTypeManager.GetAllowedTileTypes(touched, debug: true);
-        if (allowed.Count == 0 || !allowed.Contains(touched.tileType))
+        bool canBeCurrent = allowed.Contains(touched.tileType) || touched.tileType == -1;
+        bool canBePrevious = allowed.Contains(touched.previousTileType);
+        if (allowed.Count != 1 && !canBePrevious && (allowed.Count == 0 || !canBeCurrent))
         {
             //It cannot be anything, or it cannot be what it is, reset it if possible
+            //If allowed.Count == 1, then it can only be something specific, which is handled later
             if (touched.Reset())
             {
                 if (propagationMode == PropagationMode.CompletelyRandom || propagationMode == PropagationMode.LeastPossibleOutcomesFirst)
                 {
                     AddToEvaluation(touched, cascadeTile);
                 }
-                //Can it be anything?
+                touched.allowedTypes = allowed;
+                //Can it be something?
                 if (allowed.Count > 0)
                 {
-                    //Ok, then its neighbors can be what they are without issue, for the moment being
-                    //Update its allowedTypes
-                    touched.allowedTypes = allowed;
+                    //Ok, then its gradient should be updated
                     touched.ApplyPossibilityGradient();
                 }
-                if (allowed.Count == 0 || (allowed.Count != previousAllowedCount && previousAllowedCount != 0))
+                if (allowed.Count == 0 || !canBeCurrent || (allowed.Count != previousAllowedCount && previousAllowedCount != 0))
                 {
                     //It's impossible for it to be what it is, or the amount of allowed types was not the same as it previously was (the neighbors have been updated, so this should be updated as well
                     //Reset its neighbors, update its allowed types, and add the neighbors to the cascade if they were not reset
                     List<WaveformTile> neighbors = MapCreation.GetNeighbors(touched);
                     foreach (var neigh in neighbors)
                     {
-                        if (neigh.tileType != -1 || 1 == 1)
+                        if (neigh.tileType != -1)
                         {
                             int previousTileType = neigh.tileType;
                             if (previousTileType != -1)
@@ -545,6 +583,7 @@ public class WaveformCollapse : MonoBehaviour
                             }
                             if (neigh.Reset())
                             {
+                                neigh.previousTileType = previousTileType;
                                 cascadeQueue.Add(neigh);
                             }
                         }
@@ -553,11 +592,35 @@ public class WaveformCollapse : MonoBehaviour
                     if (allowed.Count == 0)
                     {
                         //print("CASCADE : Refreshing touched allowed types");
-                        touched.allowedTypes = TileTypeManager.GetAllowedTileTypes(touched, debug: true);
+                        touched.allowedTypes = TileTypeManager.GetAllowedTileTypes(touched);
                         touched.ApplyPossibilityGradient();
                     }
                 }
             }
+        }
+        else if (allowed.Count == 1 || canBePrevious)
+        {
+            if (allowed.Count == 1)
+            {
+                touched.tileType = allowed[0];
+            }
+            else
+            {
+                touched.tileType = touched.previousTileType;
+            }
+            touched.UpdateMaterial();
+            touched.allowedTypes = allowed;
+            List<WaveformTile> neighbors = MapCreation.GetNeighbors(touched);
+            foreach(var neigh in neighbors){
+                if (neigh.tileType == -1){
+                    cascadeQueue.Add(neigh);
+                }
+            }
+        }
+        else if (touched.tileType == -1)
+        {
+            //If it can be something, but not what it was previously, and not just 1 thing, it should be added to evaluation
+            AddToEvaluation(touched, cascadeTile);
         }
         //print("CASCADE : Finished with " + touched.transform.position);
         //print("allowedTypes.Count = " + touched.allowedTypes.Count);

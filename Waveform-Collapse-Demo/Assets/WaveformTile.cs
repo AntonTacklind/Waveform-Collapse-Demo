@@ -6,6 +6,7 @@ using UnityEngine;
 public class WaveformTile : MonoBehaviour
 {
     public int tileType;
+    public int previousTileType;
     public int x;
     public int y;
     public bool forced = false;
@@ -92,5 +93,10 @@ public class WaveformTile : MonoBehaviour
             ApplyPossibilityGradient();
             return true;
         }
+    }
+
+    public string GetCoordinates()
+    {
+        return x + "," + y;
     }
 }
