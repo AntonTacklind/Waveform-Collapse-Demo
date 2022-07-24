@@ -56,6 +56,11 @@ public class CameraHandler : MonoBehaviour
         {
             transform.position = center;
         }
+
+        if (Input.GetKey(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
     }
 
     public static void SetCameraCenter(Vector3 position)
