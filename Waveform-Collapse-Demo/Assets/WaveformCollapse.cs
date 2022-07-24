@@ -247,6 +247,11 @@ public class WaveformCollapse : MonoBehaviour
         }
     }
 
+    public void OnGenerationDropdownChanged()
+    {
+
+    }
+
     private void BigBang()
     {
         while (PrioQueueCount() > 0 || queue.Count > 0 || binaryTree.value != null)
