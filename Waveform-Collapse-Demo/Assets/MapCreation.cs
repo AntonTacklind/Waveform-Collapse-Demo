@@ -45,6 +45,8 @@ public class MapCreation : MonoBehaviour
 
     public void PostStart()
     {
+        widthTextObject.transform.parent.GetComponent<InputField>().text = "" + DEFAULT_WIDTH;
+        heightTextObject.transform.parent.GetComponent<InputField>().text = "" + DEFAULT_HEIGHT;
         GenerateGrid(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     }
 
